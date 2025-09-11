@@ -1,0 +1,232 @@
+# TrueNAS Home‑Lab
+
+> A reproducible, well‑documented home NAS/media stack based on TrueNAS SCALE, ZFS, and a handful of self‑hosted apps (Jellyfin, Pi‑hole, Tailscale, etc.).   
+I used AI heavily to source parts and help with setup and permission granting.
+---
+
+## 🔎 Project Snapshot
+- **Host chassis:** Fractal Define 7 (custom)  <!-- edit if different -->
+- **Mainboard/CPU:** Dell Precision T3600 platform (specs TBD)  <!-- TODO: fill exact CPU/chipset -->
+- **RAM:** 64 GB ECC DDR3/DDR4  <!-- confirm generation -->
+- **HBA:** LSI/Broadcom 9300‑8i (IT mode)
+- **System OS:** TrueNAS **SCALE** (version: `x.y.z`)  <!-- TODO: add current -->
+- **Primary pool:** RAID‑Z2 with 6×4 TB (hot spare: 1×4 TB)  <!-- adjust if needed -->
+- **Apps (major):** Jellyfin, Pi‑hole (alt host), Tailscale, (Future: LibreNMS, Home Assistant, FreePBX)
+- **Clients:** Windows 10/11 ripper PC (SMB), macOS, Apple TV (Swiftfin)
+- **Last reviewed:** YYYY‑MM‑DD  
+
+> **Goal:** Stable media + fileserver with resilient ZFS, sane snapshots/replication, easy remote access, and clear runbooks for maintenance.
+
+---
+
+## 🗂️ Repo Structure
+```
+truenas-homelab/
+├─ README.md                  # you are here
+├─ docs/
+│  ├─ architecture.md         # high-level diagram + design decisions
+│  ├─ zfs-layout.md           # vdevs, datasets, compression, recordsize
+│  ├─ shares-and-perms.md     # SMB/NFS/ACL patterns
+│  ├─ apps/                   # Jellyfin, Pi-hole, Tailscale configs/notes
+│  │  ├─ jellyfin.md
+│  │  ├─ pihole.md
+│  │  └─ tailscale.md
+│  ├─ backup-strategy.md      # 3‑2‑1, offsite, cloud, cold storage
+│  ├─ monitoring-alerting.md  # email alerts, SMART, UPS, health checks
+│  ├─ maintenance.md          # runbooks & schedules
+│  └─ troubleshooting.md      # common issues + fixes
+├─ config-examples/
+│  ├─ smb/                    # share definitions (sanitized)
+│  ├─ zfs/                    # snapshot tasks, replication tasks
+│  ├─ ups/                    # NUT/UPS snippets
+│  └─ tailscale/              # ACLs/snippets (sanitized)
+├─ scripts/                   # helper scripts (Bash/Pwsh)
+│  ├─ zfs-snapshot.sh
+│  ├─ zfs-prune.sh
+│  └─ health-report.sh
+└─ CHANGELOG.md
+```
+
+> Use this README as the landing page; keep detailed how‑tos in `docs/` and runnable examples in `scripts/`.
+
+---
+
+## 🧱 Hardware Inventory
+| Component | Model / Details | Notes |
+|---|---|---|
+| Chassis | Fractal Define 7 | hot‑swap cages? fan layout? |
+| Motherboard | Dell Precision T3600 | confirm BIOS version |
+| CPU | TBD | add model/cores/threads |
+| RAM | 64 GB ECC | validated ECC in OS/`edacutil`/`dmesg` |
+| HBA | LSI/Broadcom 9300‑8i (IT mode) | firmware & P/N |
+| Boot Device | SSD (size/model) | mirrored? |
+| UPS | Model TBD | USB/Network (NUT) |
+
+### Disk Map
+| Bay/Port | Drive Model | Capacity | Serial (redacted) | Pool | Role |
+|---|---|---:|---|---|---|
+| sda | WD Red Plus | 4 TB | XXXX | MediaPool | data |
+| sdb | … | … | … | MediaPool | data |
+| … | … | … | … | MediaPool | hot‑spare |
+
+---
+
+## 🧮 ZFS Design
+- **Pool:** `MediaPool` (RAID‑Z2)
+- **Compression:** `lz4`
+- **Ashift:** 12 (4 K sectors)
+- **Recordsize:** defaults except: `MediaPool/Media/Movies` ➜ `1M` (large files)
+- **Atime:** `off` for media datasets
+- **ACL:** NFSv4 ACLs (Windows‑friendly)
+
+### Dataset Layout (example)
+```
+MediaPool
+├─ Apps
+│  └─ Jellyfin
+├─ Media
+│  ├─ Movies
+│  ├─ TV
+│  ├─ Music
+│  └─ Photos
+└─ Backups
+   ├─ PC
+   └─ Mac
+```
+
+### Snapshot Policy (baseline)
+- **Hourly**: keep 24
+- **Daily**: keep 14
+- **Weekly**: keep 8
+- **Monthly**: keep 6–12  
+
+> Adjust for space; media is mostly append‑only, so daily+weekly may suffice. Place commands/tasks in `config-examples/zfs/`.
+
+#### Example CLI (TrueNAS SCALE shell)
+```bash
+# ad‑hoc snapshot
+zfs snapshot -r MediaPool@manual-$(date +%Y%m%d-%H%M)
+
+# list snapshots & used space
+zfs list -t snapshot -o name,used,creation | sort
+```
+
+> **Note:** Snapshot *used* grows only as blocks change; on media libraries (write‑once), retention can be generous with modest space impact. Track with `zfs list -t snapshot`.
+
+---
+
+## 📤 Replication & Backup
+- **Local replication:** `MediaPool/*` ➜ `BackupPool/*` (if/when added)
+- **Offsite:** (TBD) cloud bucket or rotating USB disk (cold storage)
+- **Integrity:** `zpool scrub` monthly; SMART short weekly, long quarterly
+
+Checklist:
+- [ ] Define 3‑2‑1 targets in `docs/backup-strategy.md`
+- [ ] Schedule scrubs in TrueNAS Tasks
+- [ ] Document restore DR test (e.g., simulated file loss)
+
+---
+
+## 📡 Networking & Services
+### SMB Shares
+| Share | Dataset | Purpose | Clients | Notes |
+|---|---|---|---|---|
+| `Media` | `MediaPool/Media` | Jellyfin ingest | Windows/macOS | case‑insensitive ok |
+| `Rips` | `MediaPool/Media/Movies/_incoming` | from Windows ripper | Windows | write perms; mover job |
+
+**Windows ripper PC mapping**
+```powershell
+# Map drive on login
+New-PSDrive -Name M -PSProvider FileSystem -Root \\truenas\Media -Persist
+```
+
+### Jellyfin (Apps)
+- Mount path: `/mnt/MediaPool/Media`
+- Transcoding: (VAAPI/NVENC?)  <!-- TODO: fill -->
+- Client notes: Apple TV (Swiftfin) → enable native player if A/V sync issues
+
+### Tailscale
+- TrueNAS app defaults mostly OK; restrict exit nodes; use `--advertise-routes` only if needed
+- ACL examples in `config-examples/tailscale/`
+
+### Pi‑hole
+- Temporary secondary instance on Ubuntu/Mac (notes in `docs/apps/pihole.md`)
+- Permanent instance recommended on dedicated VM/container
+
+---
+
+## 🔔 Monitoring & Alerting
+- **Email alerts:** SMTP config (redacted); test via System Settings → Alert Services → Send Test
+- **SMART:** enable per‑disk; weekly short/quarterly long; alert thresholds
+- **UPS/NUT:** connect USB/network; configure shutdown on low battery; test
+- **Health report:** `scripts/health-report.sh` to summarize `zpool status`, SMART, temps
+
+---
+
+## 🛠️ Maintenance Runbooks
+Place detailed steps in `docs/maintenance.md`. Example schedule:
+
+| Task | Cadence | Command/Where |
+|---|---|---|
+| `zpool scrub MediaPool` | Monthly | Tasks → Scrub |
+| SMART short test | Weekly | Storage → Disks → S.M.A.R.T. |
+| SMART long test | Quarterly | … |
+| App updates | Monthly | Apps → Updates |
+| Config backup | Monthly/Before changes | System → General → Save Config |
+
+---
+
+## 🧯 Troubleshooting Log (samples)
+- **ECC verification:** dashboard shows ECC; CLI: `dmesg | grep -i ecc` or `edac-util`  <!-- add exact output -->
+- **Swiftfin A/V sync:** toggle “Use native player” on Apple TV
+- **SMB perms:** use NFSv4 ACL editor; avoid Unix perms on Windows shares
+- **Jellyfin library empty:** confirm dataset mapping + rescan metadata
+
+Document real incidents & fixes in `docs/troubleshooting.md`.
+
+---
+
+## 🔐 Security Notes
+- Create non‑root admin
+- Strong SMB auth; disable guest
+- Tailscale ACLs: least privilege
+- Regular OS/app updates
+
+---
+
+## 🧭 Roadmap
+- [ ] Add LibreNMS for network monitoring
+- [ ] Migrate Pi‑hole to VM in homelab
+- [ ] Offsite backup target + automation
+- [ ] Publish sanitized config examples
+- [ ] Diagram hardware & network in `docs/architecture.md`
+
+---
+
+## 🧩 How to Reproduce (Quickstart)
+```text
+1) Install TrueNAS SCALE on mirrored boot SSDs
+2) Flash HBA to IT mode (if needed); attach drives
+3) Create `MediaPool` (RAID‑Z2), datasets (above), set compression/atime
+4) Configure SMB shares; apply NFSv4 ACLs
+5) Install Jellyfin app; mount media dataset
+6) Configure snapshots + (optional) replication
+7) Set up email alerts, SMART, and UPS
+8) (Optional) Tailscale for remote access
+```
+
+---
+
+## 🧾 CHANGELOG
+See `CHANGELOG.md` and date every meaningful change (hardware, pool layout, ACL policy, apps, backup).
+
+---
+
+## 📎 Badges (optional)
+Add shields.io badges to highlight versions/health:
+```
+![TrueNAS](https://img.shields.io/badge/TrueNAS-SCALE-informational)
+![ZFS](https://img.shields.io/badge/ZFS-RAIDZ2-blue)
+```
+
+---
