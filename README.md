@@ -14,7 +14,6 @@ Welcome to my personal network lab project! This repository documents the design
 - [VPN Configuration](#vpn-configuration)  
 - [DNS & Security](#dns--security)  
 - [Backup & Monitoring](#backup--monitoring)
-- [WebTrees - Family Geneology - Self Hosted](#Webtrees-Self-Hosted-Genealogy-Platform)
 - [Future Plans](#future-plans)
 
 ---
