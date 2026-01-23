@@ -92,34 +92,6 @@ The lab is designed to simulate small-to-mid-sized network environments while pr
 
 ---
 
-## Webtrees Self-Hosted Genealogy Platform
-
-# Webtrees Self-Hosted Genealogy Platform
-
-## Project Summary
-This project documents my deployment and configuration of [Webtrees](https://webtrees.net/), an open-source, self-hosted genealogy application for managing and exploring family trees. The goal is to maintain full control over personal family history data while building hands-on experience with Linux server administration, LAMP stack management, and secure web hosting practices.
-
----
-
-## Key Features
-- Self-hosted on **Ubuntu Server** within my home lab environment
-- Full **LAMP stack** deployment (Linux, Apache, MySQL/MariaDB, PHP)
-- Secured with **Let's Encrypt SSL** for encrypted HTTPS access
-- Automated **database and media backups**
-- Fully private setup — no reliance on third-party genealogy platforms
-
----
-
-## Why This Project?
-- Provides a **private, customizable platform** for family history research
-- Strengthens my skills in:
-  - Web server administration (**Apache2**)
-  - Database management (**MySQL/MariaDB**)
-  - Linux security, backups, and system automation
-- Supports long-term **digital preservation** of family records
-
----
-
 ## Future Plans
 - Evaluate **Docker-based deployment** for easier portability
 - Integrate with existing **home network services** (DNS, backup systems)
