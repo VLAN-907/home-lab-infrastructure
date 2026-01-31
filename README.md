@@ -1,128 +1,116 @@
-# Home Network Lab Documentation
+# Home Network Lab Infrastructure
 
-Welcome to my personal network lab project! This repository documents the design, configuration, and ongoing development of my home network and lab environment. The goal is to improve my skills in network engineering, firewall management, VLAN segmentation, VPN configuration, and infrastructure documentation — while building a secure, segmented, and scalable network at home.
+This repository documents my home network and lab environment, built to develop practical skills in network engineering, firewall policy management, VLAN segmentation, and infrastructure documentation — while maintaining a secure and usable home network.
 
 ---
 
-## Table of Contents  
-
-- [Overview](#overview)  
-- [Lab Hardware](#lab-hardware)  
-- [Network Topology](#network-topology)  
-- [Services & Tools](#services--tools)  
-- [VLAN Design](#vlan-design)  
-- [VPN Configuration](#vpn-configuration)  
-- [DNS & Security](#dns--security)  
-- [Backup & Monitoring](#backup--monitoring)
+## Table of Contents
+- [Overview](#overview)
+- [Current Architecture](#current-architecture)
+- [Lab Hardware](#lab-hardware)
+- [Network Topology](#network-topology)
+- [VLAN Design](#vlan-design)
+- [DNS & Security](#dns--security)
+- [Monitoring & Backups](#monitoring--backups)
+- [Retired / Previously Tested](#retired--previously-tested)
 - [Future Plans](#future-plans)
 
 ---
 
-## Overview  
+## Overview
 
-This lab uses **OPNsense** as the core firewall/router with VLAN segmentation, **Pi-hole** for ad-blocking and DNS filtering, **OpenDNS** for DNS security, and various hardware components like managed switches and wireless access points.  
+The lab is centered around a Cisco router acting as the core Layer 3 gateway for routing, segmentation, and policy enforcement. Wireless access is provided by a Ubiquiti UniFi U7 Pro access point, with the UniFi Network Application hosted on-premises for centralized device management and visibility. DNS filtering is handled by Pi-hole, with the environment documented through diagrams and configuration notes to reflect real operational practices.
 
-The lab is designed to simulate small-to-mid-sized network environments while providing a secure and scalable infrastructure for real-world use and future experimentation.
-
----
-
-## Lab Hardware  
-
-| Device                  | Purpose                       |
-|:------------------------|:------------------------------|
-| Custom OPNsense Firewall | Router/Firewall/VLAN Manager   |
-| TP-Link Smart Switch     | VLAN segmentation, Trunk ports |
-| Synology RT6600ax        | Wireless Access Point          |
-| Ubuntu Server VM         | Jellyfin, Pi-hole, WireGuard    |
-| Various Client Devices   | Test devices (phones, laptops) |
+Previously, this lab ran on OPNsense; it has since been migrated to a Cisco router as part of building deeper hands-on experience with Cisco-based routing and segmentation.
 
 ---
 
-## Network Topology  
+## Current Architecture
+
+**Primary goals:**
+- Secure separation of untrusted/IoT devices from trusted devices
+- Simple, reliable home network operation
+- Room to expand into additional segmentation, monitoring, and remote access over time
+
+**Core components:**
+- Managed switching with VLAN tagging/trunking
+- Pi-hole DNS filtering
+- OpenDNS upstream filtering
+
+---
+
+## Lab Hardware
+
+| Device                    | Purpose                                |
+|:--------------------------|:----------------------------------------|
+| TP-Link Managed Switch    | VLAN tagging, trunk/access ports        |
+| Ubuntu Server VM          | Pi-hole and supporting services         |
+| Client Devices            | Phones, laptops, IoT devices            |
+|Ubiquiti UniFi U7 Pro | Wireless Access Point (Wi-Fi 7)              |
+|Ubuntu Server VM | UniFi Network Application, Pi-hole                |
+
+---
+
+## Network Topology
 
 [Network Diagram](./diagrams/LabSetupDiagram.png)
 
+---
+
+## VLAN Design
+
+Current segmentation is intentionally simple and reflects the current production setup:
+
+| VLAN / Network | Subnet          | Purpose                     |
+|:--------------|:-----------------|:----------------------------|
+| LAN           | 192.168.1.0/24    | Trusted user devices        |
+| IoT           | 192.168.2.0/24    | Smart home / IoT devices    |
+
+**Policy approach:**
+- Inter-VLAN access is restricted by firewall rules (default-deny posture where applicable)
+- IoT devices are limited to required outbound access and specific allowed destinations/services
 
 ---
 
-## Services & Tools  
+## DNS & Security
 
-- **OPNsense** — Firewall, Routing, VLAN Management  
-- **WireGuard VPN** — Remote secure access  
-- **Pi-hole** — DNS Filtering and Ad Blocking [Link to more info](./docs/pihole.md) 
-- **OpenDNS** — Cloud-based DNS Security  
-- **Unbound (DNS Resolver)** — Internal DNS resolution  
-- **Ubuntu Server** — Media services and Pi-hole
-- **Security Onion** - IDS (Intrusion Detction), NSM (Network Security Monitoring), Log Management and Threat Hunting [Link to more info](./docs/SecurityOnion.md) 
+- **Pi-hole** provides DNS-level filtering (ads/malware domains)
+- **OpenDNS** provides upstream DNS security filtering
+
+Documentation and notes:
+- Pi-hole: [docs/pihole.md](./docs/pihole.md)
 
 ---
 
-## VLAN Design  
+## Monitoring & Backups
 
-| VLAN ID | Name        | Subnet         | Purpose                |
-|:--------|:------------|:----------------|:------------------------|
-| 10      | LAN          | 192.168.10.0/24 | Default Untagged         |
-| 20      | Trusted      | 192.168.20.0/24 | Trusted Devices          |
-| 30      | IoT          | 192.168.30.0/24 | IoT/Smart Devices        |
-| 40      | Guest        | 192.168.40.0/27 | Guest WiFi               |
-| 50      | Cameras      | 192.168.50.0/24 | IP Cameras               |
-| 70      | Media        | 192.168.70.0/24 | Streaming devices/Jellyfin|
-| 99      | Management   | 192.168.99.0/24 | Network device management|
+Planned / in-progress operational controls include:
+- OPNsense configuration backups
+- Firmware update / maintenance plan
+- Syslog collection
+- NTP validation/monitoring
+- SNMP metrics collection (where supported)
 
 ---
 
-## VPN Configuration  
+## Retired / Previously Tested
 
-- **WireGuard** VPN set up on OPNsense for secure remote access  
+These were deployed or evaluated at one time but are not currently in use:
 
-
----
-
-## DNS & Security  
-
-- **Pi-hole** for DNS ad-blocking  
-- **OpenDNS** for cloud-based DNS filtering  
-- **Unbound DNS Resolver** configured for internal resolution with forwarding enabled
-
----
-
-## Backup & Monitoring  
-
-- Future integration: Reg Config Backups via OPNsense, Firmware update plan and scnapshot schedule, syslog, NTP monitoring, and SNMP stats collection
+- **Unbound DNS resolver** (replaced/removed to simplify DNS path)
+- **WireGuard VPN** (evaluated; may be reintroduced as part of a future remote-access design)
 
 ---
 
 ## Future Plans
-- Evaluate **Docker-based deployment** for easier portability
-- Integrate with existing **home network services** (DNS, backup systems)
-- Potential public-facing deployment with a domain and secure remote access
+
+- Expand segmentation beyond two VLANs as requirements grow (e.g., Guest, Management)
+- Add centralized logging and better monitoring/alerting
+- Revisit secure remote access (VPN) with documentation and threat-model-driven rules
+- Evaluate containerization where it improves portability and maintainability
 
 ---
 
-## Related Technologies
-- Ubuntu Server 22.04 LTS
-- Apache2
-- MySQL or MariaDB
-- PHP 8.x
-- Let's Encrypt (Certbot)
-- Webtrees 2.x
-
----
-
-*This project reflects my ongoing efforts to build a secure, private, and reliable platform for family tree management while developing practical system administration skills in my home lab.*
-
----
-
-## Future Plans  
-
-
-[Future Projects](./docs/Future-Projects.md)
-
-
-
----
-
-## Contact  
+## Contact
 
 If you're interested in this project or have suggestions, feel free to connect with me on LinkedIn or reach out via GitHub Issues.
-
