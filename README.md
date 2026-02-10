@@ -12,8 +12,7 @@ This repository documents my home network and lab environment, built to develop 
 - [VLAN Design](#vlan-design)
 - [DNS & Security](#dns--security)
 - [Monitoring & Backups](#monitoring--backups)
-- [Retired / Previously Tested](#retired--previously-tested)
-- [Future Plans](#future-plans)
+
 
 ---
 
@@ -85,7 +84,6 @@ Documentation and notes:
 ## Monitoring & Backups
 
 Planned / in-progress operational controls include:
-- OPNsense configuration backups
 - Firmware update / maintenance plan
 - Syslog collection
 - NTP validation/monitoring
