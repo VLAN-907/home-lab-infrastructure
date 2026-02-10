@@ -1,114 +1,44 @@
-# Home Network Lab Infrastructure
-
-This repository documents my home network and lab environment, built to develop practical skills in network engineering, firewall policy management, VLAN segmentation, and infrastructure documentation — while maintaining a secure and usable home network.
-
----
-
-## Table of Contents
-- [Overview](#overview)
-- [Current Architecture](#current-architecture)
-- [Lab Hardware](#lab-hardware)
-- [Network Topology](#network-topology)
-- [VLAN Design](#vlan-design)
-- [DNS & Security](#dns--security)
-- [Monitoring & Backups](#monitoring--backups)
-
-
----
+# Resilient Core Services Lab (DHCP/DNS + Backups)
 
 ## Overview
+This lab demonstrates the design and implementation of resilient core infrastructure services using Windows Server, spanning multiple hypervisors and backed up to TrueNAS. The goal is to achieve **service-level high availability** for DHCP and DNS, independent of hypervisor HA, while maintaining safe and restorable backups.
 
-The lab is centered around a Cisco router acting as the core Layer 3 gateway for routing, segmentation, and policy enforcement. Wireless access is provided by a Ubiquiti UniFi U7 Pro access point, with the UniFi Network Application hosted on-premises for centralized device management and visibility. DNS filtering is handled by Pi-hole, with the environment documented through diagrams and configuration notes to reflect real operational practices.
+This project intentionally focuses on **identity and network services**, not application workloads.
 
-Previously, this lab ran on OPNsense; it has since been migrated to a Cisco router as part of building deeper hands-on experience with Cisco-based routing and segmentation.
+## Goals
+- Redundant Active Directory–integrated DNS
+- DHCP failover between two Windows Servers
+- Service resiliency across separate hypervisors (VMware + Proxmox)
+- Backups to TrueNAS with documented restore procedures
+- Clear validation tests and lessons learned
 
----
+## Non-Goals
+- Hypervisor-level HA as a dependency
+- Load balancers or advanced network appliances
+- Production-scale AD complexity
 
-## Current Architecture
+## Architecture Summary
+- DC1: Windows Server on VMware
+- DC2: Windows Server on Proxmox
+- Shared LAN/VLAN
+- TrueNAS as centralized backup target
 
-**Primary goals:**
-- Secure separation of untrusted/IoT devices from trusted devices
-- Simple, reliable home network operation
-- Room to expand into additional segmentation, monitoring, and remote access over time
+## Documentation
+- [Network Design](docs/01-network-design.md)
+- [Build Notes](docs/02-build-notes.md)
+- [DHCP Failover](docs/03-dhcp-failover.md)
+- [DNS Design](docs/04-dns-design.md)
+- [Backups & Restore](docs/05-backups-and-restore.md)
+- [Testing & Validation](docs/06-testing-and-validation.md)
+- [Lessons Learned](docs/07-lessons-learned.md)
 
-**Core components:**
-- Managed switching with VLAN tagging/trunking
-- Pi-hole DNS filtering
-- OpenDNS upstream filtering
+## Status
+✔ Completed core services  
+✔ Backups verified  
+⬜ Optional VMware HA sprint (future)
 
----
-
-## Lab Hardware
-
-| Device                    | Purpose                                |
-|:--------------------------|:----------------------------------------|
-| TP-Link Managed Switch    | VLAN tagging, trunk/access ports        |
-| Ubuntu Server VM          | Pi-hole and supporting services         |
-| Client Devices            | Phones, laptops, IoT devices            |
-|Ubiquiti UniFi U7 Pro | Wireless Access Point (Wi-Fi 7)              |
-|Ubuntu Server VM | UniFi Network Application, Pi-hole                |
-
----
-
-## Network Topology
-
-[Network Diagram](./diagrams/LabSetupDiagram.png)
-
----
-
-## VLAN Design
-
-Current segmentation is intentionally simple and reflects the current production setup:
-
-| VLAN / Network | Subnet          | Purpose                     |
-|:--------------|:-----------------|:----------------------------|
-| LAN           | 192.168.1.0/24    | Trusted user devices        |
-| IoT           | 192.168.2.0/24    | Smart home / IoT devices    |
-
-**Policy approach:**
-- Inter-VLAN access is restricted by firewall rules (default-deny posture where applicable)
-- IoT devices are limited to required outbound access and specific allowed destinations/services
-
----
-
-## DNS & Security
-
-- **Pi-hole** provides DNS-level filtering (ads/malware domains)
-- **OpenDNS** provides upstream DNS security filtering
-
-Documentation and notes:
-- Pi-hole: [docs/pihole.md](./docs/pihole.md)
-
----
-
-## Monitoring & Backups
-
-Planned / in-progress operational controls include:
-- Firmware update / maintenance plan
-- Syslog collection
-- NTP validation/monitoring
-- SNMP metrics collection (where supported)
-
----
-
-## Retired / Previously Tested
-
-These were deployed or evaluated at one time but are not currently in use:
-
-- **Unbound DNS resolver** (replaced/removed to simplify DNS path)
-- **WireGuard VPN** (evaluated; may be reintroduced as part of a future remote-access design)
-
----
-
-## Future Plans
-
-- Expand segmentation beyond two VLANs as requirements grow (e.g., Guest, Management)
-- Add centralized logging and better monitoring/alerting
-- Revisit secure remote access (VPN) with documentation and threat-model-driven rules
-- Evaluate containerization where it improves portability and maintainability
-
----
-
-## Contact
-
-If you're interested in this project or have suggestions, feel free to connect with me on LinkedIn or reach out via GitHub Issues.
+## Next Steps
+- DFS Namespace + Replication
+- AD CS (Certificate Services)
+- WSUS or patch management
+- Proxmox Backup Server integration
